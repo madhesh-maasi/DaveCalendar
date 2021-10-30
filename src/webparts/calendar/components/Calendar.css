@@ -1,0 +1,32 @@
+.calendar-section {
+  display: flex;
+  width: 100%;
+}
+
+.calendar-section a {
+  color: #000 !important;
+  text-decoration: none !important;
+}
+#workbenchPageContent {
+  max-width: 100%;
+}
+.content_3f3fd3c2,
+.CanvasZone {
+  padding: 0 !important;
+  max-width: 100% !important;
+}
+#myCalendar {
+  min-width: 480px;
+}
+#viewItemModal .modal-header {
+  border-bottom: 0;
+}
+#viewItemModal .modal-footer {
+  border-top: 0;
+}
+.modal-label {
+  font-weight: bold;
+}
+.modal-body {
+  padding: 1rem 2rem !important;
+}

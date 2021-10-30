@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "dave-calendar-client-side-solution",
+    "id": "c7a0f8d1-6297-49b8-abb4-62bdb5c452c9",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": ""
+    },
+     "webApiPermissionRequests": [
+      {
+        "resource": "Microsoft Graph",
+        "scope": "Calendars.Read"
+      },
+      {
+        "resource": "Microsoft Graph",
+        "scope": "Calendars.ReadWrite"
+      },
+      {
+        "resource": "Microsoft Graph",
+        "scope": "MailboxSettings.Read"
+      },
+      {
+        "resource": "Microsoft Graph",
+        "scope": "MailboxSettings.ReadWrite"
+      }
+    ]
+  
+  },
+  
+  "paths": {
+    "zippedPackage": "solution/dave-calendar.sppkg"
+  }
+}
