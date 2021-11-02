@@ -12,12 +12,14 @@ import listPlugin from "@fullcalendar/list";
 import "./Bootstrap.js";
 import "./Bootstrap.css";
 import ReactTooltip from "react-tooltip";
+import { lowerFirst } from "lodash";
 // import Moment from 'react-moment';
 // import 'moment-timezone';
 let calendar;
 let data = [];
 let arrColor = [];
 let userInGroup = false;
+let calendarLoadFirst = true;
 function CalendarDetails(props) {
   const [events, setevents] = useState([]);
   const [load, setload] = useState("");
@@ -31,36 +33,6 @@ function CalendarDetails(props) {
 
   if (events.length > 0) {
     BindCalender(events);
-    let dragClass = document.querySelectorAll(".fc-event-draggable");
-    dragClass.forEach((dC) => {
-      dC.classList.remove("fc-event-draggable");
-      dC.classList.add("view-event");
-    });
-    const viewEvent = document.querySelectorAll(".view-event");
-    viewEvent.forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        console.log(e);
-        let indexID = (e.currentTarget as HTMLInputElement).getAttribute(
-          "data-id"
-        );
-        let viewItem = data.filter((li) => li.id == indexID)[0];
-        console.log(viewItem);
-        let attendees = "";
-        if (viewItem.attendees.length > 0) {
-          viewItem.attendees.forEach((att) => {
-            attendees += `${att.emailAddress.name}; `;
-          });
-        }
-        setViewItems({
-          Title: viewItem.title,
-          StartDate: new Date(viewItem.start).toLocaleString().toString(),
-          EndDate: new Date(viewItem.end).toLocaleString().toString(),
-          Attendees: attendees,
-          Description: viewItem.description,
-        });
-        document.getElementById("viewItemModal").click();
-      });
-    });
   }
 
   useEffect(() => {
@@ -85,14 +57,26 @@ function CalendarDetails(props) {
           new Date(firstDay).toISOString().split("T")[0] + "T12:00:00.000Z";
         let LastDayOfMonth =
           new Date(lastDay).toISOString().split("T")[0] + "T12:00:00.000Z";
-
+        let myId = "";
+        let currEmail = "";
+        await graph.me().then((myR: any) => {
+          myId = myR.id;
+          currEmail = myR.userPrincipalName;
+        });
+        await graph.groups
+          .getById(li[0].GroupID)
+          .members()
+          .then((groupRes: any) => {
+            userInGroup = groupRes.filter((gR) => gR.id == myId).length > 0;
+          });
         await graph.me
           .events()
           .then((event) => {
             event = event.filter((evt) => {
               return (
                 new Date(firstDayOfMonth) <= new Date(evt.start.dateTime) &&
-                new Date(LastDayOfMonth) >= new Date(evt.end.dateTime)
+                new Date(LastDayOfMonth) >= new Date(evt.end.dateTime) &&
+                evt.organizer.emailAddress.address == currEmail
               );
             });
             data = event.map((evt) => {
@@ -114,16 +98,6 @@ function CalendarDetails(props) {
             });
           })
           .then(async () => {
-            let myId = "";
-            await graph.me().then((myR: any) => {
-              myId = myR.id;
-            });
-            await graph.groups
-              .getById(li[0].GroupID)
-              .members()
-              .then((groupRes: any) => {
-                userInGroup = groupRes.filter((gR) => gR.id == myId).length > 0;
-              });
             userInGroup
               ? await graph.groups
                   .getById(li[0].GroupID)
@@ -177,6 +151,7 @@ function CalendarDetails(props) {
                     setevents(data);
                   })
               : setevents(data);
+            // console.log(events);
           });
       });
   }, []);
@@ -249,34 +224,63 @@ function CalendarDetails(props) {
       </div>
     </div>
   );
-}
-function BindCalender(Calendardetails) {
-  // calendar.refetchEvents();
-  const dateFormate = new Date("1976-04-19T12:59-0500");
-  var calendarEl = document.getElementById("myCalendar");
-  calendar = new Calendar(calendarEl, {
-    plugins: [interactionPlugin, dayGridPlugin, timeGridPlugin, listPlugin],
-    headerToolbar: {
-      left: "prev,next today",
-      center: "title",
-      right: "dayGridMonth",
-    },
-    initialDate: new Date(),
-    navLinks: true, // can click day/week names to navigate views
-    editable: true,
-    dayMaxEvents: true, // allow "more" link when too many events
-    events: Calendardetails,
-    eventDidMount: (event) => {
-      event.el.setAttribute("data-id", event.event.id);
-      event.el.setAttribute("data-bs-target", "#viewItemModal");
-      event.el.setAttribute("data-bs-toggle", "modal");
-      event.el.setAttribute("title", event.event.title);
-      ReactTooltip.rebuild();
-    },
-  });
+  function BindCalender(Calendardetails) {
+    // calendar.refetchEvents();
+    // !Calendar Bind
+    const dateFormate = new Date("1976-04-19T12:59-0500");
+    var calendarEl = document.getElementById("myCalendar");
+    calendar = new Calendar(calendarEl, {
+      plugins: [interactionPlugin, dayGridPlugin, timeGridPlugin, listPlugin],
+      headerToolbar: {
+        left: "prev,next today",
+        center: "title",
+        right: "dayGridMonth",
+      },
+      initialDate: new Date(),
+      navLinks: true, // can click day/week names to navigate views
+      editable: true,
+      dayMaxEvents: true, // allow "more" link when too many events
+      events: Calendardetails,
+      eventDidMount: (event) => {
+        event.el.setAttribute("data-id", event.event.id);
+        event.el.setAttribute("data-bs-target", "#viewItemModal");
+        event.el.setAttribute("data-bs-toggle", "modal");
+        event.el.setAttribute("title", event.event.title);
+        event.el.classList.add("view-event");
+        // ! Show Event Click
+        event.el.addEventListener("click", (e) => {
+          let indexID = event.event.id;
+          let viewItem = data.filter((li) => li.id == indexID)[0];
+          // console.log(viewItem);
+          let attendees = "";
+          if (viewItem.attendees.length > 0) {
+            viewItem.attendees.forEach((att) => {
+              attendees += `${att.emailAddress.name}; `;
+            });
+          }
+          setViewItems({
+            Title: viewItem.title,
+            StartDate: new Date(viewItem.start).toLocaleString().toString(),
+            EndDate: new Date(viewItem.end).toLocaleString().toString(),
+            Attendees: attendees,
+            Description: viewItem.description,
+          });
+        });
+      },
+    });
+    // ! Locked Rerender of Calendar
+    if (calendarLoadFirst) {
+      calendar.refetchEvents();
+      calendar.render();
+      calendarLoadFirst = false;
+    }
 
-  calendar.refetchEvents();
-  calendar.render();
+    let dragClass = document.querySelectorAll(".fc-event-draggable");
+    dragClass.forEach((dC) => {
+      dC.classList.remove("fc-event-draggable");
+      dC.classList.add("view-event");
+    });
+  }
 }
 
 export default CalendarDetails;
