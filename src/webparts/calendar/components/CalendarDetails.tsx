@@ -15,6 +15,7 @@ import ReactTooltip from "react-tooltip";
 import { lowerFirst } from "lodash";
 // import Moment from 'react-moment';
 // import 'moment-timezone';
+// Latest to Kamesh
 let calendar;
 let data = [];
 let arrColor = [];
@@ -75,8 +76,8 @@ function CalendarDetails(props) {
             event = event.filter((evt) => {
               return (
                 new Date(firstDayOfMonth) <= new Date(evt.start.dateTime) &&
-                new Date(LastDayOfMonth) >= new Date(evt.end.dateTime) &&
-                evt.organizer.emailAddress.address == currEmail
+                new Date(LastDayOfMonth) >= new Date(evt.end.dateTime)
+                // && evt.organizer.emailAddress.address == currEmail
               );
             });
             data = event.map((evt) => {
