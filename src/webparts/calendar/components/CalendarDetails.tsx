@@ -21,6 +21,8 @@ let data = [];
 let arrColor = [];
 let userInGroup = false;
 let calendarLoadFirst = true;
+let timeZone = "Pacific Standard Time";
+let headers = { Prefer: 'outlook.timezone="' + timeZone + '"' };
 function CalendarDetails(props) {
   const [events, setevents] = useState([]);
   const [load, setload] = useState("");
@@ -30,6 +32,7 @@ function CalendarDetails(props) {
     EndDate: "",
     Attendees: "",
     Description: "",
+    AllDay: "",
   });
 
   if (events.length > 0) {
@@ -64,89 +67,198 @@ function CalendarDetails(props) {
           myId = myR.id;
           currEmail = myR.userPrincipalName;
         });
-        await graph.groups
-          .getById(li[0].GroupID)
-          .members()
-          .then((groupRes: any) => {
-            userInGroup = groupRes.filter((gR) => gR.id == myId).length > 0;
-          });
-        await graph.me
-          .events()
-          .then((event) => {
-            event = event.filter((evt) => {
-              return (
-                new Date(firstDayOfMonth) <= new Date(evt.start.dateTime) &&
-                new Date(LastDayOfMonth) >= new Date(evt.end.dateTime)
-                // && evt.organizer.emailAddress.address == currEmail
-              );
+        if (li[0].GroupID != null) {
+          await graph.groups
+            .getById(li[0].GroupID)
+            .members.top(999)()
+            .then((groupRes: any) => {
+              userInGroup = groupRes.filter((gR) => gR.id == myId).length > 0;
             });
+        }
+
+        await graph.me.events
+          .configure({ headers })
+          .filter(
+            "start/datetime ge '" +
+              firstDayOfMonth +
+              "' and end/datetime le '" +
+              LastDayOfMonth +
+              "'"
+          )
+          .top(999)()
+          .then((event) => {
             data = event.map((evt) => {
-              return {
-                id: evt.id,
-                title: evt.subject,
-                start: evt.start.dateTime,
-                end: evt.end.dateTime,
-                display: "block",
-                attendees: evt.attendees,
-                backgroundColor: arrColor.filter(
-                  (aC) => aC.Title == "CurrentUser"
-                )[0].HexCode,
-                borderColor: arrColor.filter(
-                  (aC) => aC.Title == "CurrentUser"
-                )[0].HexCode,
-                description: evt.bodyPreview,
-              };
+              let myEventColor = arrColor.filter((aC) => aC.IsUser == true)[0]
+                .HexCode;
+              let dow = [];
+              evt.recurrence &&
+              evt.recurrence.pattern.type == "weekly" &&
+              evt.recurrence.pattern.daysOfWeek.length > 0
+                ? evt.recurrence.pattern.daysOfWeek.forEach((dw) => {
+                    dw == "monday"
+                      ? dow.push(1)
+                      : dw == "tuesday"
+                      ? dow.push(2)
+                      : dw == "wednesday"
+                      ? dow.push(3)
+                      : dw == "thursday"
+                      ? dow.push(4)
+                      : dw == "friday"
+                      ? dow.push(5)
+                      : dw == "saturday"
+                      ? dow.push(6)
+                      : dw == "sunday"
+                      ? dow.push(7)
+                      : "";
+                  })
+                : "";
+              return evt.recurrence && evt.recurrence.pattern.type == "weekly"
+                ? {
+                    id: evt.id,
+                    daysOfWeek: dow,
+                    startRecur: evt.recurrence.range.startDate,
+                    endRecur: evt.recurrence.range.endDate,
+                    title: evt.subject,
+                    start: evt.start.dateTime,
+                    end: evt.end.dateTime,
+                    display: "block",
+                    attendees: evt.attendees,
+                    backgroundColor: myEventColor,
+                    borderColor: myEventColor,
+                    description: evt.bodyPreview,
+                    allDay: evt.isAllDay,
+                  }
+                : evt.recurrence && evt.recurrence.pattern.type == "daily"
+                ? {
+                    id: evt.id,
+                    // daysOfWeek: [1, 2, 3, 4, 5, 6, 7],
+                    startRecur: evt.recurrence.range.startDate,
+                    endRecur: evt.recurrence.range.endDate,
+                    title: evt.subject,
+                    start: evt.start.dateTime,
+                    end: evt.end.dateTime,
+                    display: "block",
+                    attendees: evt.attendees,
+                    backgroundColor: myEventColor,
+                    borderColor: myEventColor,
+                    description: evt.bodyPreview,
+                    allDay: evt.isAllDay,
+                  }
+                : {
+                    id: evt.id,
+                    title: evt.subject,
+                    start: evt.start.dateTime,
+                    end: evt.end.dateTime,
+                    display: "block",
+                    attendees: evt.attendees,
+                    backgroundColor: myEventColor,
+                    borderColor: myEventColor,
+                    description: evt.bodyPreview,
+                    allDay: evt.isAllDay,
+                  };
             });
           })
           .then(async () => {
-            userInGroup
+            userInGroup && li[0].GroupID != null
               ? await graph.groups
                   .getById(li[0].GroupID)
-                  .events()
+                  .events.configure({ headers })
+                  .filter(
+                    "start/datetime ge '" +
+                      firstDayOfMonth +
+                      "' and end/datetime le '" +
+                      LastDayOfMonth +
+                      "'"
+                  )
+                  .top(999)()
                   .then((result: any) => {
-                    result = result.filter((res) => {
-                      return (
-                        new Date(firstDayOfMonth) <=
-                          new Date(res.start.dateTime) &&
-                        new Date(LastDayOfMonth) >= new Date(res.end.dateTime)
-                      );
-                    });
                     let data1 = [];
                     data1 = result.map((evt) => {
-                      return {
-                        id: evt.id,
-                        title: evt.subject,
-                        start: evt.start.dateTime,
-                        end: evt.end.dateTime,
-                        display: "block",
-                        attendees: evt.attendees,
-                        description: evt.bodyPreview,
-                        backgroundColor: evt.subject
+                      let eventColor = "";
+                      let eventColorArr = arrColor.filter((colLi) => {
+                        return evt.subject
                           .toLowerCase()
-                          .includes("meeting")
-                          ? arrColor.filter((aC) => aC.Title == "Meeting")[0]
-                              .HexCode
-                          : evt.subject.toLowerCase().includes("vacation")
-                          ? arrColor.filter((aC) => aC.Title == "Vacation")[0]
-                              .HexCode
-                          : evt.subject.toLowerCase().includes("call")
-                          ? arrColor.filter((aC) => aC.Title == "OnCall")[0]
-                              .HexCode
-                          : "#3788d8",
-                        borderColor: evt.subject
-                          .toLowerCase()
-                          .includes("meeting")
-                          ? arrColor.filter((aC) => aC.Title == "Meeting")[0]
-                              .HexCode
-                          : evt.subject.toLowerCase().includes("vacation")
-                          ? arrColor.filter((aC) => aC.Title == "Vacation")[0]
-                              .HexCode
-                          : evt.subject.toLowerCase().includes("call")
-                          ? arrColor.filter((aC) => aC.Title == "OnCall")[0]
-                              .HexCode
-                          : "#3788d8",
-                        //  description: evt.bodyPreview,
-                      };
+                          .includes(colLi.Title.toLowerCase());
+                      });
+                      eventColorArr.length > 0
+                        ? (eventColor = eventColorArr[0].HexCode)
+                        : (eventColor = arrColor.filter(
+                            (colLi) => colLi.DefaultEventColor == true
+                          )[0].HexCode);
+
+                      console.log(eventColor);
+
+                      let dow = [];
+                      evt.recurrence &&
+                      evt.recurrence.pattern.type == "weekly" &&
+                      evt.recurrence.pattern.daysOfWeek.length > 0
+                        ? evt.recurrence.pattern.daysOfWeek.forEach((dw) => {
+                            dw == "monday"
+                              ? dow.push(1)
+                              : dw == "tuesday"
+                              ? dow.push(2)
+                              : dw == "wednesday"
+                              ? dow.push(3)
+                              : dw == "thursday"
+                              ? dow.push(4)
+                              : dw == "friday"
+                              ? dow.push(5)
+                              : dw == "saturday"
+                              ? dow.push(6)
+                              : dw == "sunday"
+                              ? dow.push(7)
+                              : "";
+                          })
+                        : "";
+                      return evt.recurrence &&
+                        evt.recurrence.pattern.type == "weekly"
+                        ? {
+                            id: evt.id,
+                            title: evt.subject,
+                            daysOfWeek: dow,
+                            startRecur: evt.recurrence.range.startDate,
+                            endRecur: evt.recurrence.range.endDate,
+                            start: evt.start.dateTime,
+                            end: evt.end.dateTime,
+                            display: "block",
+                            attendees: evt.attendees,
+                            description: evt.bodyPreview,
+                            backgroundColor: eventColor,
+                            borderColor: eventColor,
+                            allDay: evt.isAllDay,
+                            //  description: evt.bodyPreview,
+                          }
+                        : evt.recurrence &&
+                          evt.recurrence.pattern.type == "daily"
+                        ? {
+                            id: evt.id,
+                            title: evt.subject,
+                            daysOfWeek: [1, 2, 3, 4, 5, 6, 7],
+                            startRecur: evt.recurrence.range.startDate,
+                            endRecur: evt.recurrence.range.endDate,
+                            start: evt.start.dateTime,
+                            end: evt.end.dateTime,
+                            display: "block",
+                            attendees: evt.attendees,
+                            description: evt.bodyPreview,
+                            backgroundColor: eventColor,
+                            borderColor: eventColor,
+                            allDay: evt.isAllDay,
+                            //  description: evt.bodyPreview,
+                          }
+                        : {
+                            id: evt.id,
+                            title: evt.subject,
+                            start: evt.start.dateTime,
+                            end: evt.end.dateTime,
+                            display: "block",
+                            attendees: evt.attendees,
+                            description: evt.bodyPreview,
+                            backgroundColor: eventColor,
+                            borderColor: eventColor,
+                            allDay: evt.isAllDay,
+                            //  description: evt.bodyPreview,
+                          };
                     });
                     data = [...data, ...data1];
                     setevents(data);
@@ -157,7 +269,7 @@ function CalendarDetails(props) {
       });
   }, []);
   return (
-    <div>
+    <div className="w-100">
       <div className="calendar-section" id="myCalendar"></div>
 
       <button
@@ -204,6 +316,11 @@ function CalendarDetails(props) {
                 <div className="col-5 modal-label">Attendees</div>
                 <div className="col-1">:</div>
                 <div className="col-6">{ViewItems.Attendees}</div>
+              </div>
+              <div className="row my-3">
+                <div className="col-5 modal-label">All Day</div>
+                <div className="col-1">:</div>
+                <div className="col-6">{ViewItems.AllDay}</div>
               </div>
               <div className="row my-3">
                 <div className="col-5 modal-label">Description</div>
@@ -265,6 +382,7 @@ function CalendarDetails(props) {
             EndDate: new Date(viewItem.end).toLocaleString().toString(),
             Attendees: attendees,
             Description: viewItem.description,
+            AllDay: viewItem.allDay ? "Yes" : "No",
           });
         });
       },

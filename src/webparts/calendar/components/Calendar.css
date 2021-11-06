@@ -15,8 +15,11 @@
   padding: 0 !important;
   max-width: 100% !important;
 }
+.w-100{
+  width:100%;
+}
 #myCalendar {
-  min-width: 480px;
+  min-width: calc(100% - 300px);
 }
 #viewItemModal .modal-header {
   border-bottom: 0;
