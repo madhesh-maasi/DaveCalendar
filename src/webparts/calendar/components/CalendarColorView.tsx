@@ -1,31 +1,48 @@
+import { template } from "lodash";
 import * as React from "react";
 import { useState, useEffect } from "react";
+import CalendarColorItem from "./CalendarColorItem";
 import "./CalendarColorView.css";
+let isOnLoad = true;
 function CalendarColorView(props) {
-  const [arrColLi, setarrColLi] = useState([]);
-  useEffect(() => {
-    props.spcontext.web.lists
-      .getByTitle("CalColorConfig")
-      .items.get()
-      .then((data) => {
-        setarrColLi(data);
-      });
-  });
+  const [selectedItems, setSelectedItems] = useState([]);
+
+  const selectedItemHandler = (selectedItem) => {
+    selectedItems.length > 0
+      ? selectedItems.filter((item) => item == selectedItem).length == 0
+        ? setSelectedItems([...selectedItems, selectedItem])
+        : setSelectedItems([...selectedItems])
+      : setSelectedItems([...selectedItems, selectedItem]);
+  };
+  const deSelectedItemHandler = (deSelectedItem) => {
+    let tempArray = [];
+    if (selectedItems.length == 0 && isOnLoad) {
+      isOnLoad = false;
+      tempArray = props.allData;
+    } else {
+      tempArray = selectedItems;
+    }
+    // let tempArray = selectedItems;
+    tempArray = tempArray.filter((tA) => tA != deSelectedItem);
+    setSelectedItems(tempArray);
+  };
+
+  // if (props.allData.length > 0) {
+  //   setSelectedItems(props.allData);
+  // }
+
+  props.onItemClick(selectedItems);
   return (
     <div className="color-info-section">
-      {arrColLi.map((li) => {
+      {props.arrColor.map((li) => {
         return (
-          <div className="color-item">
-            <div
-              className="item-color"
-              style={{
-                background: `${li.HexCode}`,
-                width: "30px",
-                height: "30px",
-              }}
-            ></div>
-            <div className="item-name">{li.Title}</div>
-          </div>
+          <CalendarColorItem
+            title={li.Title}
+            id={li.ID}
+            hex={li.HexCode}
+            onSelected={selectedItemHandler}
+            onDeSelected={deSelectedItemHandler}
+          />
         );
       })}
     </div>

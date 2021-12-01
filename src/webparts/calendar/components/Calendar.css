@@ -15,8 +15,8 @@
   padding: 0 !important;
   max-width: 100% !important;
 }
-.w-100{
-  width:100%;
+.w-100 {
+  width: 100%;
 }
 #myCalendar {
   min-width: calc(100% - 300px);
@@ -38,4 +38,10 @@
 }
 .fc .fc-popover {
   z-index: 100 !important;
+}
+/* .color-item.active {
+  background: #e1e9ff;
+} */
+.fc-event-main {
+  cursor: pointer !important;
 }
