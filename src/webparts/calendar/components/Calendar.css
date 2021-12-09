@@ -45,3 +45,6 @@
 .fc-event-main {
   cursor: pointer !important;
 }
+.modalDescription {
+  word-break: break-word;
+}

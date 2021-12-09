@@ -87,7 +87,9 @@ function CalendarDetails(props) {
               <div className="row my-3">
                 <div className="col-5 modal-label">Description</div>
                 <div className="col-1">:</div>
-                <div className="col-6">{ViewItems.Description}</div>
+                <div className="col-6 modalDescription">
+                  {ViewItems.Description}
+                </div>
               </div>
             </div>
             <div className="modal-footer">
@@ -154,9 +156,8 @@ function CalendarDetails(props) {
       },
     });
     // ! Locked Rerender of Calendar
-    console.log(clickedTarget);
 
-    if (clickedTarget == "") {
+    if (clickedTarget == "" && calendarEl != null) {
       calendar.render();
       calendar.refetchEvents();
     } else {
