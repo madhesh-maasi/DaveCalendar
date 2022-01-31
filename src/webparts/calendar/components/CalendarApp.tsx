@@ -9,7 +9,8 @@ let allData = [];
 let FilteredData = [];
 let arrColorVar = [];
 let userInGroup = false;
-let timeZone = "Pacific Standard Time"; // For Live
+// let timeZone = "Pacific Standard Time"; // For Dave
+let timeZone = "Eastern Standard Time"; // For SilverLeaf and EJF
 // let timeZone = "Indian Standard Time"; //for local time zone
 let headers = { Prefer: 'outlook.timezone="' + timeZone + '"' };
 let isOnload = true;
