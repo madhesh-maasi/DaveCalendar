@@ -9,6 +9,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
+import rrulePlugin from "@fullcalendar/rrule";
 import "./Bootstrap.js";
 import "./Bootstrap.css";
 
@@ -28,6 +29,22 @@ function CalendarDetails(props) {
   // let canRenderCal = props.canRender;
   if (props.calendarValue.length > 0) {
     BindCalender(props.calendarValue);
+  } else {
+    BindCalender([
+      {
+        allDay: false,
+        attendees: [],
+        backgroundColor: "",
+        borderColor: "",
+        description: "",
+        display: "",
+        end: "",
+        id: "",
+        itemFrom: "",
+        start: "",
+        title: "",
+      },
+    ]);
   }
 
   return (
@@ -112,7 +129,13 @@ function CalendarDetails(props) {
     const dateFormate = new Date("1976-04-19T12:59-0500");
     var calendarEl = document.getElementById("myCalendar");
     calendar = new Calendar(calendarEl, {
-      plugins: [interactionPlugin, dayGridPlugin, timeGridPlugin, listPlugin],
+      plugins: [
+        rrulePlugin,
+        interactionPlugin,
+        dayGridPlugin,
+        timeGridPlugin,
+        listPlugin,
+      ],
       headerToolbar: {
         left: "prev,next today",
         center: "title",
@@ -123,6 +146,7 @@ function CalendarDetails(props) {
       editable: true,
       dayMaxEvents: true, // allow "more" link when too many events
       events: Calendardetails,
+
       showNonCurrentDates: false,
       eventDidMount: (event) => {
         event.el.setAttribute("data-id", event.event.id);

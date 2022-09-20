@@ -9,9 +9,9 @@ let allData = [];
 let FilteredData = [];
 let arrColorVar = [];
 let userInGroup = false;
-// let timeZone = "Pacific Standard Time"; // For Dave
-let timeZone = "Eastern Standard Time"; // For SilverLeaf and EJF
-// let timeZone = "Indian Standard Time"; //for local time zone
+let timeZone = "Pacific Standard Time"; // For Dave RPM
+// let timeZone = "Eastern Standard Time"; // For SilverLeaf and EJF
+// let timeZone = "India Standard Time"; //for local time zone
 let headers = { Prefer: 'outlook.timezone="' + timeZone + '"' };
 let isOnload = true;
 const CalendarApp = (props) => {
@@ -74,6 +74,8 @@ const CalendarApp = (props) => {
               )
               .top(999)()
               .then((event) => {
+                console.log(event);
+
                 data = event.map((evt) => {
                   let recED;
                   let recEDate;
@@ -115,16 +117,35 @@ const CalendarApp = (props) => {
                         evt.end.dateTime.split("T")[1]
                       }`))
                     : "";
+
                   return evt.recurrence &&
                     evt.recurrence.pattern.type == "weekly"
                     ? {
                         id: evt.id,
-                        daysOfWeek: dow,
-                        startRecur: evt.recurrence.range.startDate,
-                        endRecur: recED,
+                        // daysOfWeek: dow,
+                        // startRecur: evt.recurrence.range.startDate,
+                        // endRecur: recED,
                         title: evt.subject,
                         start: evt.start.dateTime,
-                        end: recEndDateTime,
+                        end:
+                          evt.recurrence.range.type == "noEnd" ||
+                          evt.recurrence.range.endDate == "0001-01-01"
+                            ? `${
+                                new Date(
+                                  new Date(
+                                    evt.recurrence.range.startDate
+                                  ).setFullYear(
+                                    new Date(
+                                      evt.recurrence.range.startDate
+                                    ).getFullYear() + 1
+                                  )
+                                )
+                                  .toISOString()
+                                  .split("T")[0]
+                              }T${evt.end.dateTime.split("T")[1]}`
+                            : `${evt.recurrence.range.endDate}T${
+                                evt.end.dateTime.split("T")[1]
+                              }`,
                         display: "block",
                         attendees: evt.attendees,
                         backgroundColor: myEventColor,
@@ -132,23 +153,263 @@ const CalendarApp = (props) => {
                         description: evt.bodyPreview,
                         allDay: evt.isAllDay,
                         itemFrom: "PersonalCalendar",
+                        rrule: {
+                          freq: "weekly",
+                          interval: evt.recurrence.pattern.interval,
+                          byweekday: dow.map((dw) =>
+                            dw == 1
+                              ? "mo"
+                              : dw == 2
+                              ? "tu"
+                              : dw == 3
+                              ? "we"
+                              : dw == 4
+                              ? "th"
+                              : dw == 5
+                              ? "fr"
+                              : dw == 6
+                              ? "sa"
+                              : "su"
+                          ),
+                          dtstart: `${evt.recurrence.range.startDate}T${
+                            evt.start.dateTime.split("T")[1]
+                          }`, // will also accept '20120201T103000'
+                          until:
+                            evt.recurrence.range.type == "noEnd" ||
+                            evt.recurrence.range.endDate == "0001-01-01"
+                              ? `${
+                                  new Date(
+                                    new Date(
+                                      evt.recurrence.range.startDate
+                                    ).setFullYear(
+                                      new Date(
+                                        evt.recurrence.range.startDate
+                                      ).getFullYear() + 1
+                                    )
+                                  )
+                                    .toISOString()
+                                    .split("T")[0]
+                                }T${evt.end.dateTime.split("T")[1]}`
+                              : evt.recurrence.range.endDate, // will also accept '20120201'
+                        },
                       }
                     : evt.recurrence && evt.recurrence.pattern.type == "daily"
                     ? {
                         id: evt.id,
                         // daysOfWeek: [1, 2, 3, 4, 5, 6, 7],
-                        startRecur: evt.recurrence.range.startDate,
-                        endRecur: recED,
+                        // startRecur: evt.recurrence.range.startDate,
+                        // endRecur: recED,
                         title: evt.subject,
                         start: evt.start.dateTime,
-                        end: recEndDateTime,
+                        end:
+                          evt.recurrence.range.type == "noEnd" ||
+                          evt.recurrence.range.endDate == "0001-01-01"
+                            ? `${
+                                new Date(
+                                  new Date(
+                                    evt.recurrence.range.startDate
+                                  ).setFullYear(
+                                    new Date(
+                                      evt.recurrence.range.startDate
+                                    ).getFullYear() + 1
+                                  )
+                                )
+                                  .toISOString()
+                                  .split("T")[0]
+                              }T${evt.end.dateTime.split("T")[1]}`
+                            : `${evt.recurrence.range.endDate}T${
+                                evt.end.dateTime.split("T")[1]
+                              }`,
                         display: "block",
                         attendees: evt.attendees,
                         backgroundColor: myEventColor,
                         borderColor: myEventColor,
                         description: evt.bodyPreview,
                         allDay: evt.isAllDay,
+                        rrule: {
+                          freq: "daily",
+                          interval: evt.recurrence.pattern.interval,
+                          byweekday: dow.map((dw) =>
+                            dw == 1
+                              ? "mo"
+                              : dw == 2
+                              ? "tu"
+                              : dw == 3
+                              ? "we"
+                              : dw == 4
+                              ? "th"
+                              : dw == 5
+                              ? "fr"
+                              : dw == 6
+                              ? "sa"
+                              : "su"
+                          ),
+                          dtstart: `${evt.recurrence.range.startDate}T${
+                            evt.start.dateTime.split("T")[1]
+                          }`, // will also accept '20120201T103000'
+                          until:
+                            evt.recurrence.range.type == "noEnd" ||
+                            evt.recurrence.range.endDate == "0001-01-01"
+                              ? `${
+                                  new Date(
+                                    new Date(
+                                      evt.recurrence.range.startDate
+                                    ).setFullYear(
+                                      new Date(
+                                        evt.recurrence.range.startDate
+                                      ).getFullYear() + 1
+                                    )
+                                  )
+                                    .toISOString()
+                                    .split("T")[0]
+                                }T${evt.end.dateTime.split("T")[1]}`
+                              : `${evt.recurrence.range.endDate}T${
+                                  evt.end.dateTime.split("T")[1]
+                                }`, // will also accept '20120201'
+                        },
                         itemFrom: "PersonalCalendar",
+                      }
+                    : evt.recurrence &&
+                      evt.recurrence.pattern.type == "absoluteMonthly"
+                    ? {
+                        id: evt.id,
+                        title: evt.subject,
+                        start: evt.start.dateTime,
+                        end:
+                          evt.recurrence.range.type == "noEnd" ||
+                          evt.recurrence.range.endDate == "0001-01-01"
+                            ? `${
+                                new Date(
+                                  new Date(
+                                    evt.recurrence.range.startDate
+                                  ).setFullYear(
+                                    new Date(
+                                      evt.recurrence.range.startDate
+                                    ).getFullYear() + 1
+                                  )
+                                )
+                                  .toISOString()
+                                  .split("T")[0]
+                              }T${evt.end.dateTime.split("T")[1]}`
+                            : `${evt.recurrence.range.endDate}T${
+                                evt.end.dateTime.split("T")[1]
+                              }`,
+                        display: "block",
+                        attendees: evt.attendees,
+                        backgroundColor: myEventColor,
+                        borderColor: myEventColor,
+                        description: evt.bodyPreview,
+                        allDay: evt.isAllDay,
+                        rrule: {
+                          freq: "monthly",
+                          interval: evt.recurrence.pattern.interval,
+                          dtstart: `${evt.recurrence.range.startDate}T${
+                            evt.start.dateTime.split("T")[1]
+                          }`, // will also accept '20120201T103000'
+                          until:
+                            evt.recurrence.range.type == "noEnd" ||
+                            evt.recurrence.range.endDate == "0001-01-01"
+                              ? `${
+                                  new Date(
+                                    new Date(
+                                      evt.recurrence.range.startDate
+                                    ).setFullYear(
+                                      new Date(
+                                        evt.recurrence.range.startDate
+                                      ).getFullYear() + 1
+                                    )
+                                  )
+                                    .toISOString()
+                                    .split("T")[0]
+                                }T${evt.end.dateTime.split("T")[1]}`
+                              : evt.recurrence.range.endDate, // will also accept '20120201'
+                        },
+                        itemFrom: "PersonalCalendar",
+                      }
+                    : evt.recurrence &&
+                      evt.recurrence.pattern.type == "relativeMonthly"
+                    ? {
+                        id: evt.id,
+                        title: evt.subject,
+                        start: evt.start.dateTime,
+                        end:
+                          evt.recurrence.range.type == "noEnd" ||
+                          evt.recurrence.range.endDate == "0001-01-01"
+                            ? `${
+                                new Date(
+                                  new Date(
+                                    evt.recurrence.range.startDate
+                                  ).setFullYear(
+                                    new Date(
+                                      evt.recurrence.range.startDate
+                                    ).getFullYear() + 1
+                                  )
+                                )
+                                  .toISOString()
+                                  .split("T")[0]
+                              }T${evt.end.dateTime.split("T")[1]}`
+                            : `${evt.recurrence.range.endDate}T${
+                                evt.end.dateTime.split("T")[1]
+                              }`,
+                        display: "block",
+                        attendees: evt.attendees,
+                        description: evt.bodyPreview,
+                        allDay: evt.isAllDay,
+                        itemFrom: "PersonalCalendar",
+                        rrule: {
+                          freq: "monthly",
+                          interval: evt.recurrence.pattern.interval,
+                          // index: evt.recurrence.pattern.index,
+                          byweekday: evt.recurrence.pattern.daysOfWeek.map(
+                            (day) =>
+                              day == "monday"
+                                ? "mo"
+                                : day == "tuesday"
+                                ? "tu"
+                                : day == "wednesday"
+                                ? "we"
+                                : day == "thursday"
+                                ? "th"
+                                : day == "friday"
+                                ? "fr"
+                                : day == "saturday"
+                                ? "sa"
+                                : day == "sunday"
+                                ? "su"
+                                : ""
+                          ),
+                          bysetpos:
+                            evt.recurrence.pattern.index == "first"
+                              ? 1
+                              : evt.recurrence.pattern.index == "second"
+                              ? 2
+                              : evt.recurrence.pattern.index == "third"
+                              ? 3
+                              : evt.recurrence.pattern.index == "fourth"
+                              ? 4
+                              : -1,
+                          dtstart: `${evt.recurrence.range.startDate}T${
+                            evt.start.dateTime.split("T")[1]
+                          }`, // will also accept '20120201T103000'
+                          until:
+                            evt.recurrence.range.type == "noEnd" ||
+                            evt.recurrence.range.endDate == "0001-01-01"
+                              ? `${
+                                  new Date(
+                                    new Date(
+                                      evt.recurrence.range.startDate
+                                    ).setFullYear(
+                                      new Date(
+                                        evt.recurrence.range.startDate
+                                      ).getFullYear() + 1
+                                    )
+                                  )
+                                    .toISOString()
+                                    .split("T")[0]
+                                }T${evt.end.dateTime.split("T")[1]}`
+                              : evt.recurrence.range.endDate, // will also accept '20120201'
+                        },
+                        //  description: evt.bodyPreview,
                       }
                     : {
                         id: evt.id,
@@ -164,6 +425,7 @@ const CalendarApp = (props) => {
                         itemFrom: "PersonalCalendar",
                       };
                 });
+                console.log(data);
               })
               .then(async () => {
                 li.length > 0 && li[0].GroupID != null
@@ -187,6 +449,7 @@ const CalendarApp = (props) => {
                               )
                               .top(999)()
                               .then((result: any) => {
+                                console.log(result);
                                 let data1 = [];
                                 let recEndDateTime;
                                 let recEDate;
@@ -271,12 +534,33 @@ const CalendarApp = (props) => {
                                     ? {
                                         id: evt.id,
                                         title: evt.subject,
-                                        daysOfWeek: dow,
-                                        startRecur:
-                                          evt.recurrence.range.startDate,
-                                        endRecur: recED,
                                         start: evt.start.dateTime,
-                                        end: recEndDateTime,
+                                        end:
+                                          evt.recurrence.range.type ==
+                                            "noEnd" ||
+                                          evt.recurrence.range.endDate ==
+                                            "0001-01-01"
+                                            ? `${
+                                                new Date(
+                                                  new Date(
+                                                    evt.recurrence.range.startDate
+                                                  ).setFullYear(
+                                                    new Date(
+                                                      evt.recurrence.range.startDate
+                                                    ).getFullYear() + 1
+                                                  )
+                                                )
+                                                  .toISOString()
+                                                  .split("T")[0]
+                                              }T${
+                                                evt.end.dateTime.split("T")[1]
+                                              }`
+                                            : `${
+                                                evt.recurrence.range.endDate
+                                              }T${
+                                                evt.end.dateTime.split("T")[1]
+                                              }`,
+                                        initialDate: evt.start.dateTime,
                                         display: "block",
                                         attendees: evt.attendees,
                                         description: evt.bodyPreview,
@@ -284,19 +568,85 @@ const CalendarApp = (props) => {
                                         borderColor: eventColor,
                                         allDay: evt.isAllDay,
                                         itemFrom: eventType,
-                                        //  description: evt.bodyPreview,
+                                        rrule: {
+                                          freq: "weekly",
+                                          interval:
+                                            evt.recurrence.pattern.interval,
+                                          byweekday: dow.map((dw) =>
+                                            dw == 1
+                                              ? "mo"
+                                              : dw == 2
+                                              ? "tu"
+                                              : dw == 3
+                                              ? "we"
+                                              : dw == 4
+                                              ? "th"
+                                              : dw == 5
+                                              ? "fr"
+                                              : dw == 6
+                                              ? "sa"
+                                              : "su"
+                                          ),
+                                          dtstart: `${
+                                            evt.recurrence.range.startDate
+                                          }T${
+                                            evt.start.dateTime.split("T")[1]
+                                          }`, // will also accept '20120201T103000'
+                                          until:
+                                            evt.recurrence.range.type ==
+                                              "noEnd" ||
+                                            evt.recurrence.range.endDate ==
+                                              "0001-01-01"
+                                              ? `${
+                                                  new Date(
+                                                    new Date(
+                                                      evt.recurrence.range.startDate
+                                                    ).setFullYear(
+                                                      new Date(
+                                                        evt.recurrence.range.startDate
+                                                      ).getFullYear() + 1
+                                                    )
+                                                  )
+                                                    .toISOString()
+                                                    .split("T")[0]
+                                                }T${
+                                                  evt.end.dateTime.split("T")[1]
+                                                }`
+                                              : evt.recurrence.range.endDate, // will also accept '20120201'
+                                        },
                                       }
                                     : evt.recurrence &&
                                       evt.recurrence.pattern.type == "daily"
                                     ? {
                                         id: evt.id,
                                         title: evt.subject,
-                                        daysOfWeek: [1, 2, 3, 4, 5, 6, 7],
-                                        startRecur:
-                                          evt.recurrence.range.startDate,
-                                        endRecur: recED,
                                         start: evt.start.dateTime,
-                                        end: recEndDateTime,
+                                        end:
+                                          evt.recurrence.range.type ==
+                                            "noEnd" ||
+                                          evt.recurrence.range.endDate ==
+                                            "0001-01-01"
+                                            ? `${
+                                                new Date(
+                                                  new Date(
+                                                    evt.recurrence.range.startDate
+                                                  ).setFullYear(
+                                                    new Date(
+                                                      evt.recurrence.range.startDate
+                                                    ).getFullYear() + 1
+                                                  )
+                                                )
+                                                  .toISOString()
+                                                  .split("T")[0]
+                                              }T${
+                                                evt.end.dateTime.split("T")[1]
+                                              }`
+                                            : `${
+                                                evt.recurrence.range.endDate
+                                              }T${
+                                                evt.end.dateTime.split("T")[1]
+                                              }`,
+                                        // end: recEndDateTime,
                                         display: "block",
                                         attendees: evt.attendees,
                                         description: evt.bodyPreview,
@@ -304,6 +654,240 @@ const CalendarApp = (props) => {
                                         borderColor: eventColor,
                                         allDay: evt.isAllDay,
                                         itemFrom: eventType,
+                                        rrule: {
+                                          freq: "daily",
+                                          interval:
+                                            evt.recurrence.pattern.interval,
+                                          byweekday: dow.map((dw) =>
+                                            dw == 1
+                                              ? "mo"
+                                              : dw == 2
+                                              ? "tu"
+                                              : dw == 3
+                                              ? "we"
+                                              : dw == 4
+                                              ? "th"
+                                              : dw == 5
+                                              ? "fr"
+                                              : dw == 6
+                                              ? "sa"
+                                              : "su"
+                                          ),
+                                          dtstart: `${
+                                            evt.recurrence.range.startDate
+                                          }T${
+                                            evt.start.dateTime.split("T")[1]
+                                          }`, // will also accept '20120201T103000'
+                                          until:
+                                            evt.recurrence.range.type ==
+                                              "noEnd" ||
+                                            evt.recurrence.range.endDate ==
+                                              "0001-01-01"
+                                              ? `${
+                                                  new Date(
+                                                    new Date(
+                                                      evt.recurrence.range.startDate
+                                                    ).setFullYear(
+                                                      new Date(
+                                                        evt.recurrence.range.startDate
+                                                      ).getFullYear() + 1
+                                                    )
+                                                  )
+                                                    .toISOString()
+                                                    .split("T")[0]
+                                                }T${
+                                                  evt.end.dateTime.split("T")[1]
+                                                }`
+                                              : `${
+                                                  evt.recurrence.range.endDate
+                                                }T${
+                                                  evt.end.dateTime.split("T")[1]
+                                                }`, // will also accept '20120201'
+                                        },
+                                        //  description: evt.bodyPreview,
+                                      }
+                                    : evt.recurrence &&
+                                      evt.recurrence.pattern.type ==
+                                        "absoluteMonthly"
+                                    ? {
+                                        id: evt.id,
+                                        title: evt.subject,
+                                        // daysOfWeek: [1, 2, 3, 4, 5, 6, 7],
+                                        dayOfMonth:
+                                          evt.recurrence.pattern.dayOfMonth,
+
+                                        start: evt.start.dateTime,
+                                        end:
+                                          evt.recurrence.range.type ==
+                                            "noEnd" ||
+                                          evt.recurrence.range.endDate ==
+                                            "0001-01-01"
+                                            ? `${
+                                                new Date(
+                                                  new Date(
+                                                    evt.recurrence.range.startDate
+                                                  ).setFullYear(
+                                                    new Date(
+                                                      evt.recurrence.range.startDate
+                                                    ).getFullYear() + 1
+                                                  )
+                                                )
+                                                  .toISOString()
+                                                  .split("T")[0]
+                                              }T${
+                                                evt.end.dateTime.split("T")[1]
+                                              }`
+                                            : `${
+                                                evt.recurrence.range.endDate
+                                              }T${
+                                                evt.end.dateTime.split("T")[1]
+                                              }`,
+                                        // end: evt.end.dateTime,
+                                        display: "block",
+                                        attendees: evt.attendees,
+                                        description: evt.bodyPreview,
+                                        backgroundColor: eventColor,
+                                        borderColor: eventColor,
+                                        allDay: evt.isAllDay,
+                                        itemFrom: eventType,
+                                        rrule: {
+                                          freq: "monthly",
+                                          interval:
+                                            evt.recurrence.pattern.interval,
+                                          dtstart: `${
+                                            evt.recurrence.range.startDate
+                                          }T${
+                                            evt.start.dateTime.split("T")[1]
+                                          }`, // will also accept '20120201T103000'
+                                          until:
+                                            evt.recurrence.range.type ==
+                                              "noEnd" ||
+                                            evt.recurrence.range.endDate ==
+                                              "0001-01-01"
+                                              ? `${
+                                                  new Date(
+                                                    new Date(
+                                                      evt.recurrence.range.startDate
+                                                    ).setFullYear(
+                                                      new Date(
+                                                        evt.recurrence.range.startDate
+                                                      ).getFullYear() + 1
+                                                    )
+                                                  )
+                                                    .toISOString()
+                                                    .split("T")[0]
+                                                }T${
+                                                  evt.end.dateTime.split("T")[1]
+                                                }`
+                                              : evt.recurrence.range.endDate, // will also accept '20120201'
+                                        },
+                                        //  description: evt.bodyPreview,
+                                      }
+                                    : evt.recurrence &&
+                                      evt.recurrence.pattern.type ==
+                                        "relativeMonthly"
+                                    ? {
+                                        id: evt.id,
+                                        title: evt.subject,
+                                        start: evt.start.dateTime,
+                                        end:
+                                          evt.recurrence.range.type ==
+                                            "noEnd" ||
+                                          evt.recurrence.range.endDate ==
+                                            "0001-01-01"
+                                            ? `${
+                                                new Date(
+                                                  new Date(
+                                                    evt.recurrence.range.startDate
+                                                  ).setFullYear(
+                                                    new Date(
+                                                      evt.recurrence.range.startDate
+                                                    ).getFullYear() + 1
+                                                  )
+                                                )
+                                                  .toISOString()
+                                                  .split("T")[0]
+                                              }T${
+                                                evt.end.dateTime.split("T")[1]
+                                              }`
+                                            : `${
+                                                evt.recurrence.range.endDate
+                                              }T${
+                                                evt.end.dateTime.split("T")[1]
+                                              }`, // will also accept '20120201',
+                                        // end: evt.end.dateTime,
+                                        display: "block",
+                                        attendees: evt.attendees,
+                                        description: evt.bodyPreview,
+                                        backgroundColor: eventColor,
+                                        borderColor: eventColor,
+                                        allDay: evt.isAllDay,
+                                        itemFrom: eventType,
+                                        rrule: {
+                                          freq: "monthly",
+                                          interval:
+                                            evt.recurrence.pattern.interval,
+                                          // index: evt.recurrence.pattern.index,
+                                          byweekday:
+                                            evt.recurrence.pattern.daysOfWeek.map(
+                                              (day) =>
+                                                day == "monday"
+                                                  ? "mo"
+                                                  : day == "tuesday"
+                                                  ? "tu"
+                                                  : day == "wednesday"
+                                                  ? "we"
+                                                  : day == "thursday"
+                                                  ? "th"
+                                                  : day == "friday"
+                                                  ? "fr"
+                                                  : day == "saturday"
+                                                  ? "sa"
+                                                  : day == "sunday"
+                                                  ? "su"
+                                                  : ""
+                                            ),
+                                          bysetpos:
+                                            evt.recurrence.pattern.index ==
+                                            "first"
+                                              ? 1
+                                              : evt.recurrence.pattern.index ==
+                                                "second"
+                                              ? 2
+                                              : evt.recurrence.pattern.index ==
+                                                "third"
+                                              ? 3
+                                              : evt.recurrence.pattern.index ==
+                                                "fourth"
+                                              ? 4
+                                              : -1,
+                                          dtstart: `${
+                                            evt.recurrence.range.startDate
+                                          }T${
+                                            evt.start.dateTime.split("T")[1]
+                                          }`, // will also accept '20120201T103000'
+                                          until:
+                                            evt.recurrence.range.type ==
+                                              "noEnd" ||
+                                            evt.recurrence.range.endDate ==
+                                              "0001-01-01"
+                                              ? `${
+                                                  new Date(
+                                                    new Date(
+                                                      evt.recurrence.range.startDate
+                                                    ).setFullYear(
+                                                      new Date(
+                                                        evt.recurrence.range.startDate
+                                                      ).getFullYear() + 1
+                                                    )
+                                                  )
+                                                    .toISOString()
+                                                    .split("T")[0]
+                                                }T${
+                                                  evt.end.dateTime.split("T")[1]
+                                                }`
+                                              : evt.recurrence.range.endDate, // will also accept '20120201'
+                                        },
                                         //  description: evt.bodyPreview,
                                       }
                                     : {
@@ -321,6 +905,7 @@ const CalendarApp = (props) => {
                                         //  description: evt.bodyPreview,
                                       };
                                 });
+                                console.log(data1);
                                 data = [...data, ...data1];
                                 setEvents(data);
                               })
