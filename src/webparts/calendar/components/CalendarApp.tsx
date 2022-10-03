@@ -1322,7 +1322,8 @@ const CalendarApp = (props) => {
 
                 props.spcontext.web.lists
                   .getByTitle("Events")
-                  .items.get()
+                  .items.select("*,RecurrenceData")
+                  .get()
                   .then((res) => {
                     console.log(res);
                     res = res.filter((re) => !re.fRecurrence);
@@ -1343,38 +1344,38 @@ const CalendarApp = (props) => {
                     });
                     data = [...data, ...spCalendarData];
                   });
-                props.spcontext.web.lists
-                  .getByTitle("Events")
-                  .renderListDataAsStream({
-                    OverrideViewXml: `
-            <QueryOptions>
-                <ExpandRecurrence>TRUE</ExpandRecurrence>
-            </QueryOptions>
-        `,
-                  })
-                  .then((res) => {
-                    console.log(res);
-                    let recData = res.Row.map((re) => {
-                      return {
-                        id: re.UID,
-                        title: re.Title,
-                        start: re.EventDate,
-                        end: re.EndDate,
-                        display: "block",
-                        attendees: [],
-                        backgroundColor: "red",
-                        borderColor: "red",
-                        description: "",
-                        allDay: re.fAllDayEvent,
-                        itemFrom: "GroupEvent",
-                      };
-                    });
+                // props.spcontext.web.lists
+                //   .getByTitle("Events")
+                //   .renderListDataAsStream({
+                //     OverrideViewXml: `
+                //     <QueryOptions>
+                //         <ExpandRecurrence>TRUE</ExpandRecurrence>
+                //     </QueryOptions>
+                // `,
+                //   })
+                //   .then((res) => {
+                //     console.log(res);
+                //     let recData = res.Row.map((re) => {
+                //       return {
+                //         id: re.UID,
+                //         title: re.Title,
+                //         start: new Date(re.EventDate).toISOString(),
+                //         end: new Date(re.EndDate).toISOString(),
+                //         display: "block",
+                //         attendees: [],
+                //         backgroundColor: "red",
+                //         borderColor: "red",
+                //         description: "",
+                //         allDay: re.fAllDayEvent,
+                //         itemFrom: "GroupEvent",
+                //       };
+                //     });
 
-                    data = [...data, ...recData];
-                    console.log(data);
-                    setEvents(data);
-                  })
-                  .catch(console.log);
+                //     data = [...data, ...recData];
+                //     console.log(data);
+                //     setEvents(data);
+                //   })
+                //   .catch(console.log);
               });
           });
       });
