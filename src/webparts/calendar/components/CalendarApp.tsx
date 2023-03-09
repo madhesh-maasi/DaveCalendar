@@ -3,15 +3,19 @@ import { useState, useEffect } from "react";
 import CalendarColorView from "./CalendarColorView";
 import CalendarDetails from "./CalendarDetails";
 import { graph } from "@pnp/graph";
+import xmlToJSON from "xmltojson";
+import { loadTheme } from "office-ui-fabric-react";
+
+// var convert = require("xml-js");
 
 let data = [];
 let allData = [];
 let FilteredData = [];
 let arrColorVar = [];
 let userInGroup = false;
-let timeZone = "Pacific Standard Time"; // For Dave RPM
+// let timeZone = "Pacific Standard Time"; // For Dave RPM
 // let timeZone = "Eastern Standard Time"; // For SilverLeaf and EJF
-// let timeZone = "India Standard Time"; //for local time zone
+let timeZone = "India Standard Time"; //for local time zone
 let headers = { Prefer: 'outlook.timezone="' + timeZone + '"' };
 let isOnload = true;
 const CalendarApp = (props) => {
@@ -1249,6 +1253,9 @@ const CalendarApp = (props) => {
                         description: evt.bodyPreview,
                         allDay: evt.isAllDay,
                         itemFrom: "PersonalCalendar",
+                        backgroundColor: myEventColor,
+                        borderColor: myEventColor,
+
                         rrule: {
                           freq: "monthly",
                           interval: evt.recurrence.pattern.interval,
@@ -1318,64 +1325,239 @@ const CalendarApp = (props) => {
                         itemFrom: "PersonalCalendar",
                       };
                 });
-                console.log(data);
-
                 props.spcontext.web.lists
                   .getByTitle("Events")
-                  .items.select("*,RecurrenceData")
+                  .items.select(
+                    "*,RecurrenceData,ParticipantsPicker/EMail,ParticipantsPicker/Title"
+                  )
+                  .expand("ParticipantsPicker")
                   .get()
                   .then((res) => {
                     console.log(res);
-                    res = res.filter((re) => !re.fRecurrence);
-                    let spCalendarData = res.map((re) => {
-                      return {
-                        id: re.GUID,
-                        title: re.Title,
-                        start: re.EventDate,
-                        end: re.EndDate,
-                        display: "block",
-                        attendees: [],
-                        backgroundColor: "red",
-                        borderColor: "red",
-                        description: "",
-                        allDay: re.fAllDayEvent,
-                        itemFrom: "GroupEvent",
-                      };
+                    res = res.filter((row) => !row.isDelete);
+                    let spCalendarData = [];
+                    spCalendarData = res.map((re) => {
+                      let recResult;
+                      let eventColor = "";
+                      let eventType = "";
+
+                      let attendees =
+                        re.ParticipantsPicker &&
+                        re.ParticipantsPicker.length > 0
+                          ? re.ParticipantsPicker.map((users) => ({
+                              emailAddress: { name: users.Title },
+                            }))
+                          : [];
+                      let eveDescription = re.Description
+                        ? re.Description.replace(/(<([^>]+)>)/gi, "")
+                        : "";
+                      let eventColorArr = arrColorVar.filter((colLi) => {
+                        return re.Title.toLowerCase().includes(
+                          colLi.Title.toLowerCase()
+                        );
+                      });
+                      eventColorArr.length > 0
+                        ? ((eventColor = eventColorArr[0].HexCode),
+                          (eventType = "GroupCalendar"))
+                        : ((eventColor = arrColorVar.filter(
+                            (colLi) => colLi.DefaultEventColor == true
+                          )[0].HexCode),
+                          (eventType = "GroupCalendar Other"));
+                      var parser = new DOMParser();
+                      var eventDescription = parser.parseFromString(
+                        re.Description,
+                        "text/html"
+                      );
+                      console.log(eventDescription);
+                      let extractedXML = xmlToJSON.parseString(
+                        re.RecurrenceData
+                      );
+                      recResult = extractedXML.recurrence
+                        ? extractedXML.recurrence[0].rule[0]
+                        : false;
+                      return re.fRecurrence &&
+                        recResult &&
+                        recResult.repeat[0].daily &&
+                        recResult.repeat[0].daily[0]._attr.weekday
+                        ? {
+                            id: re.GUID,
+                            title: re.Title,
+                            start: re.EventDate,
+                            end: re.EndDate,
+                            display: "block",
+                            attendees: attendees,
+                            backgroundColor: eventColor,
+                            borderColor: eventColor,
+                            description: eveDescription,
+                            allDay: re.fAllDayEvent,
+                            itemFrom: eventType,
+                            rrule: {
+                              freq: "daily",
+                              interval: 1,
+                              byweekday: re.fRecurrence &&
+                                recResult.repeat[0].daily[0]._attr.weekday &&
+                                recResult.repeat[0].daily[0]._attr.weekday
+                                  ._value && ["mo", "tu", "we", "th", "fr"],
+                              dtstart: re.EventDate, // will also accept '20120201T103000'
+                              until: re.EndDate, // will also accept '20120201'
+                            },
+                          }
+                        : re.fRecurrence &&
+                          recResult &&
+                          recResult.repeat[0].daily &&
+                          !recResult.repeat[0].daily[0]._attr.weekday
+                        ? {
+                            id: re.GUID,
+                            title: re.Title,
+                            start: re.EventDate,
+                            end: re.EndDate,
+                            display: "block",
+                            attendees: attendees,
+                            backgroundColor: eventColor,
+                            borderColor: eventColor,
+                            description: eveDescription,
+                            allDay: re.fAllDayEvent,
+                            itemFrom: eventType,
+                            rrule: {
+                              freq: "daily",
+                              interval:
+                                recResult.repeat[0].daily[0]._attr.dayFrequency
+                                  ._value,
+                              byweekday: re.fRecurrence &&
+                                recResult.repeat[0].daily[0]._attr.weekday &&
+                                recResult.repeat[0].daily[0]._attr.weekday
+                                  ._value && ["mo", "tu", "we", "th", "fr"],
+                              dtstart: re.EventDate, // will also accept '20120201T103000'
+                              until: re.EndDate, // will also accept '20120201'
+                            },
+                          }
+                        : re.fRecurrence &&
+                          recResult &&
+                          recResult.repeat[0].weekly
+                        ? {
+                            id: re.GUID,
+                            title: re.Title,
+                            start: re.EventDate,
+                            end: re.EndDate,
+                            display: "block",
+                            attendees: attendees,
+                            backgroundColor: eventColor,
+                            borderColor: eventColor,
+                            description: eveDescription,
+                            allDay: re.fAllDayEvent,
+                            itemFrom: eventType,
+                            rrule: {
+                              freq: "weekly",
+                              interval:
+                                recResult.repeat[0].weekly[0]._attr
+                                  .weekFrequency._value,
+                              byweekday: Object.keys(
+                                recResult.repeat[0].weekly[0]._attr
+                              ).pop(),
+                              dtstart: re.EventDate, // will also accept '20120201T103000'
+                              until: re.EndDate, // will also accept '20120201'
+                            },
+                          }
+                        : re.fRecurrence &&
+                          recResult &&
+                          recResult.repeat[0].monthly
+                        ? {
+                            id: re.GUID,
+                            title: re.Title,
+                            start: re.EventDate,
+                            end: re.EndDate,
+                            display: "block",
+                            attendees: attendees,
+                            backgroundColor: eventColor,
+                            borderColor: eventColor,
+                            description: eveDescription,
+                            allDay: re.fAllDayEvent,
+                            itemFrom: eventType,
+                            rrule: {
+                              freq: "monthly",
+                              interval:
+                                recResult.repeat[0].monthly[0]._attr
+                                  .monthFrequency._value,
+                              byweekday: Object.keys(
+                                recResult.repeat[0].monthly[0]._attr
+                              ).pop(),
+                              dtstart: re.EventDate, // will also accept '20120201T103000'
+                              until: re.EndDate, // will also accept '20120201'
+                            },
+                          }
+                        : re.fRecurrence &&
+                          recResult &&
+                          recResult.repeat[0].monthlyByDay
+                        ? {
+                            id: re.GUID,
+                            title: re.Title,
+                            start: re.EventDate,
+                            end: re.EndDate,
+                            display: "block",
+                            attendees: attendees,
+                            backgroundColor: eventColor,
+                            borderColor: eventColor,
+                            description: eveDescription,
+                            allDay: re.fAllDayEvent,
+                            itemFrom: eventType,
+                            rrule: {
+                              freq: "monthly",
+                              interval:
+                                recResult.repeat[0].monthlyByDay[0]._attr
+                                  .monthFrequency._value,
+                              byweekday: [
+                                re.fRecurrence &&
+                                recResult.repeat[0].monthlyByDay[0].mo
+                                  ? "mo"
+                                  : re.fRecurrence &&
+                                    recResult.repeat[0].monthlyByDay[0].tu
+                                  ? "tu"
+                                  : recResult.repeat[0].monthlyByDay[0].we
+                                  ? "we"
+                                  : recResult.repeat[0].monthlyByDay[0].th
+                                  ? "th"
+                                  : recResult.repeat[0].monthlyByDay[0].fr
+                                  ? "fr"
+                                  : recResult.repeat[0].monthlyByDay[0].sa
+                                  ? "sa"
+                                  : "su",
+                              ],
+                              dtstart: re.EventDate, // will also accept '20120201T103000'
+                              until: re.EndDate, // will also accept '20120201'
+                              bysetpos:
+                                recResult.repeat[0].monthlyByDay[0]._attr
+                                  .weekdayOfMonth._value == "first"
+                                  ? 1
+                                  : recResult.repeat[0].monthlyByDay[0]._attr
+                                      .weekdayOfMonth._value == "second"
+                                  ? 2
+                                  : recResult.repeat[0].monthlyByDay[0]._attr
+                                      .weekdayOfMonth._value == "third"
+                                  ? 3
+                                  : recResult.repeat[0].monthlyByDay[0]._attr
+                                      .weekdayOfMonth._value == "fourth"
+                                  ? 4
+                                  : -1,
+                            },
+                          }
+                        : {
+                            id: re.GUID,
+                            title: re.Title,
+                            start: re.EventDate,
+                            end: re.EndDate,
+                            display: "block",
+                            attendees: attendees,
+                            backgroundColor: eventColor,
+                            borderColor: eventColor,
+                            description: eveDescription,
+                            allDay: re.fAllDayEvent,
+                            itemFrom: eventType,
+                          };
                     });
                     data = [...data, ...spCalendarData];
+                    console.log(data);
+                    setEvents(data);
                   });
-                // props.spcontext.web.lists
-                //   .getByTitle("Events")
-                //   .renderListDataAsStream({
-                //     OverrideViewXml: `
-                //     <QueryOptions>
-                //         <ExpandRecurrence>TRUE</ExpandRecurrence>
-                //     </QueryOptions>
-                // `,
-                //   })
-                //   .then((res) => {
-                //     console.log(res);
-                //     let recData = res.Row.map((re) => {
-                //       return {
-                //         id: re.UID,
-                //         title: re.Title,
-                //         start: new Date(re.EventDate).toISOString(),
-                //         end: new Date(re.EndDate).toISOString(),
-                //         display: "block",
-                //         attendees: [],
-                //         backgroundColor: "red",
-                //         borderColor: "red",
-                //         description: "",
-                //         allDay: re.fAllDayEvent,
-                //         itemFrom: "GroupEvent",
-                //       };
-                //     });
-
-                //     data = [...data, ...recData];
-                //     console.log(data);
-                //     setEvents(data);
-                //   })
-                //   .catch(console.log);
               });
           });
       });
